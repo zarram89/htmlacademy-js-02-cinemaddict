@@ -1142,3 +1142,180 @@ export default class FilmsPresenter {
 Всё необходимые действия теперь у нас собраны в двух методах, и если в будущем потребуется по открытию или сокрытию сделать что-то ещё, мы знаем куда добавить эти пару строк JavaScript.
 
 Запускаем локальный сервер и проверяем, что всё работает на этот раз как надо:
+
+### 3.9. Революция или эволюция? (часть 2)
+
+Сейчас все фильмы показываются разом. Это удобно, когда их пять-десять штук. У нас же в планах счёт идёт на сотни. Поэтому реализуем показ фильмов группами. Для этого измените код так, чтобы на старте приложения в списке отрисовывались пять первых фильмов. Пять следующих фильмов должны отрисовываться при клике на кнопку Show more. И так до тех пор, пока все фильмы не будут отрисованы, после чего нужно скрыть саму кнопку.
+
+Обратите внимание, если количество фильмов не кратно пяти, то «последняя группа» может быть меньше. Это нормально и не нарушает техзадание.
+
+Хороший интерфейс разговаривает с пользователем. Поэтому на случай, если список фильмов пуст, выведите на экран сообщение о том, что в системе пока нет фильмов. Сообщение должно появляться вместо списка фильмов. Разметку сообщения вы найдёте в директории /markup.
+
+### 3.2 — Революция или эволюция? (часть 2)
+
+Мы продолжаем наполнять наш презентер логикой. В этот раз мы займёмся списком фильмов. По условиям техзадания:
+
+После загрузки приложения в списке отображается не более 5 карточек фильмов.
+
+Показ оставшихся фильмов выполняется нажатием на кнопку «Show more». При нажатии показываются очередные 5 фильмов или оставшиеся фильмы, если их количество меньше 5.
+
+После показа всех карточек с фильмами, кнопка «Show more» скрывается.
+
+Первым делом подготовим рабочее место — заведём отдельный метод #renderFilmBoard(), который вберёт в себя логику по работе со списком фильмов. Пока что перенесём туда все render()-вызовы всего, что касается списка фильмов, из метода .init():
+
+export default class FilmsPresenter {
+...
+
+init = () => {
+this.#films = [...this.#filmsModel.get()];
+
+    this.#renderFilmBoard();
+};
+
+#renderFilmBoard() {
+render(this.#sortComponent, this.#container);
+render(this.#filmsComponent, this.#container);
+render(this.#filmListComponent, this.#filmsComponent.element);
+render(this.#filmListContainerComponent, this.#filmListComponent.element);
+
+    this.#films
+      .slice(0, Math.min(this.#films.length, FILM_COUNT_PER_STEP))
+      .forEach((film) => this.#renderFilm(film, this.#filmListContainerComponent));
+}
+
+...
+}
+Отлично, теперь у нас отрисовываются первые FILM_COUNT_PER_STEP фильмов, то есть пять:
+
+Отрисовка
+
+Теперь займёмся кнопкой «Показать ещё», что до её логики, то тут всего два условия: клик по кнопке показывает ещё FILM_COUNT_PER_STEP фильмов, пока они есть, с последней порцией фильмов скрывается сама кнопка.
+
+Начнём с показа ещё FILM_COUNT_PER_STEP фильмов. Для этого у нас всё есть, просто нужно вызвать #renderFilm() на следующих пяти фильмов из массива this.#films. Самый просто вариант что-то «запомнить» в программировании — это записать в переменную. Вот и мы, чтобы найти «следующие фильмы» будем хранить в переменной количество уже показанных фильмов:
+
+export default class FilmsPresenter {
+...
+
++  #renderedFilmCount = FILM_COUNT_PER_STEP;
+
+#renderFilmBoard() {
+render(this.#sortComponent, this.#container);
+render(this.#filmsComponent, this.#container);
+render(this.#filmListComponent, this.#filmsComponent.element);
+render(this.#filmListContainerComponent, this.#filmListComponent.element);
+
+    this.#films
+      .slice(0, Math.min(this.#films.length, FILM_COUNT_PER_STEP))
+      .forEach((film) => this.#renderFilm(film, this.#filmListContainerComponent));
+}
+
+...
+}
+Дальше рисуем кнопку с обработчиком, в котором повторяем код отрисовки, но на этот раз не от 0 до FILM_COUNT_PER_STEP, а от this.#renderedFilmCount до this.#renderedFilmCount + FILM_COUNT_PER_STEP, то есть как раз «следующие фильмы»:
+
+export default class FilmsPresenter {
+...
+
+#renderedFilmCount = FILM_COUNT_PER_STEP;
+
+#renderFilmBoard() {
+render(this.#sortComponent, this.#container);
+render(this.#filmsComponent, this.#container);
+render(this.#filmListComponent, this.#filmsComponent.element);
+render(this.#filmListContainerComponent, this.#filmListComponent.element);
+
+    this.#films
+      .slice(0, Math.min(this.#films.length, FILM_COUNT_PER_STEP))
+      .forEach((film) => this.#renderFilm(film, this.#filmListContainerComponent));
+
++    render(this.#filmButtonMoreComponent, this.#filmListComponent.element);
++    this.#filmButtonMoreComponent
++      .element
++      .addEventListener('click', (evt) => this.#filmButtonMoreClickHandler(evt));
+  }
+
++  #filmButtonMoreClickHandler(evt) {
++    this.#films
++      .slice(this.#renderedFilmCount, this.#renderedFilmCount + FILM_COUNT_PER_STEP)
++      .forEach((film) => {
++        this.#renderFilm(film, this.#filmListContainerComponent);
++      });
++
++    // Главное на каждый клик наращивать количество уже показанных фильмов
++    this.#renderedFilmCount += FILM_COUNT_PER_STEP;
++  }
+
+...
+}
+Дальше нам нужно позаботиться о крайних случаях, то есть когда фильмов изначально меньше или пять штук или когда все фильмы показаны, и кнопку нужно скрыть:
+
+export default class FilmsPresenter {
+...
+
+#renderedFilmCount = FILM_COUNT_PER_STEP;
+
+#renderFilmBoard() {
+render(this.#sortComponent, this.#container);
+render(this.#filmsComponent, this.#container);
+render(this.#filmListComponent, this.#filmsComponent.element);
+render(this.#filmListContainerComponent, this.#filmListComponent.element);
+
+    this.#films
+      .slice(0, Math.min(this.#films.length, FILM_COUNT_PER_STEP))
+      .forEach((film) => this.#renderFilm(film, this.#filmListContainerComponent));
+
++    if (this.#films.length > FILM_COUNT_PER_STEP) {
+     render(this.#filmButtonMoreComponent, this.#filmListComponent.element);
+     this.#filmButtonMoreComponent
+     .element
+     .addEventListener('click', (evt) => this.#filmButtonMoreClickHandler(evt));
++    }
+     }
+
+#filmButtonMoreClickHandler(evt) {
+this.#films
+.slice(this.#renderedFilmCount, this.#renderedFilmCount + FILM_COUNT_PER_STEP)
+.forEach((film) => {
+this.#renderFilm(film, this.#filmListContainerComponent);
+});
+
+    this.#renderedFilmCount += FILM_COUNT_PER_STEP;
+
++    if (this.#renderedFilmCount >= this.#films.length) {
++      this.#filmButtonMoreComponent.element.remove();
++      this.#filmButtonMoreComponent.removeElement();
++    }
+     }
+
+...
+}
+Готово, давайте запустим сервер для разработки и проверим, что всё работает согласно техзаданию:
+
+
+Теперь поменяем количество генерируемых фильмов на число меньше пяти, скажем на 4:
+
+Меняем количество генерируемых фильмов
+
+Сразу показаны все фильмы, а кнопки «Показать ещё» нет.
+
+Отлично, но что если поменять количество генерируемых фильмов на 0? Будет ничего… буквально вместо списка фильмов ни-че-го:
+
+Ноль генерируемых фильмов
+
+А хороший интерфейс разговаривает с пользователем. Поэтому на случай, если список фильмов пуст, выведем на экран сообщение о том, что в системе пока нет фильмов.
+
+Хорошо знакомым нам способом создадим ещё одно View с интефейсом один в один как у других наших компонентов. Вопрос только, где его отрисовать? Конечно в презентере! Заглушка «Нет фильмов» — часть списка фильмов, для отрисовки которого мы завели метод #renderFilmBoard(). Здесь мы и добавим условие:
+
+export default class FilmsPresenter {
+...
+
+#renderFilmBoard() {
+if (this.#films.length === 0) {
+render(new FilmListEmptyView(), this.#container);
+return;
+}
+
+    ...
+}
+}
+Теперь точно всё готово. Меняем количество генерируемых фильмов на 0, запускаем сервер для разработки и вуаля:
