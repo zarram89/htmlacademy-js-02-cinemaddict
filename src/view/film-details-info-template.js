@@ -1,4 +1,4 @@
-import {formatStringToDate, formatMinutesToTime} from '../utils.js';
+import {formatStringToDate, formatMinutesToTime} from '../utils/film.js';
 
 const generateNameList = (names) =>
   (names.length < 1)
@@ -63,7 +63,7 @@ export const createFilmDetailsInfoTemplate = (filmInfo) => {
           </tr>
           <tr class="film-details__row">
             <td class="film-details__term">Country</td>
-            <td class="film-details__cell">${release.releaseCountry}</td>
+            <td class="film-details__cell">${release.releaseСountry}</td>
           </tr>
           <tr class="film-details__row">
             <td class="film-details__term">${generateGenreTitle(genre)}</td>
