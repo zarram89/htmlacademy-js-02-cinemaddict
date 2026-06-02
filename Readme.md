@@ -1717,3 +1717,71 @@ switch (sortType) {
 Логика
 
 Запускаем сервер для разработки и проверяем, что фильмы сортируются:
+
+### 6.5. Обновление века (часть 1)
+
+Попап с подробной информацией о фильме — довольно сложный интерактивный компонент. Но это поведение — не часть бизнес-логики приложения. Это «бизнес-логика» самого компонента. Поэтому для реализации этой логики воспользуемся классом AbstractStatefulView. Компоненты, созданные на основе этого класса, смогут себя перерисовывать.
+
+Унаследуйте компонент попапа с подробной информацией о фильме от AbstractStatefulView с пока пустым методом _restoreHandlers.
+
+Теперь нужно реализовать перерисовку попапа после взаимодействия с пользователем:
+
+при клике на эмоцию подставлять её в соответствующий блок.
+Обратите внимание, что, кроме визуальной подстановки эмоции, нужно также изменять атрибут checked у соответствующей скрытой радиокнопки. А ещё позаботиться при перерисовке о позиции скролла.
+
+При перерисовке компонента все обработчики событий будут утеряны, поэтому их нужно будет навесить заново.
+
+### 6.1 — Обновление века (часть 1)
+
+Кекс принёс нам компонент, который умеет не только отображать данные, но и сохранять состояние отображения — AbsctractStatefulView. Состояние компонента определяется на основе данных, за это отвечает метод static parseFilmToState(), а потом «живёт своей жизнью»:
+
+static parseFilmToState = (
+film,
+comments,
+checkedEmotion = null,
+comment = null,
+scrollPosition = 0
+) => ({
+...film,
+comments,
+checkedEmotion,
+comment,
+scrollPosition
+});
+Обновление состояния приводит к перерисовке компонента, поэтому нужно позаботиться о восстановлении обработчиков событий:
+
+#setInnerHandlers = () => {
+this.element
+.querySelectorAll('.film-details__emoji-label')
+.forEach((element) => {
+element.addEventListener('click', this.#emotionClickHandler);
+});
+this.element
+.querySelector('.film-details__comment-input')
+.addEventListener('input', this.#commentInputChangeHandler);
+};
+Зачем нам это нужно? Чтобы реализовать выбор эмоции комментария. Выбор эмоции — это показать блок, считать выбор пользователя, записать в состояние и только потом, по необходимости, из состояния превратить в данные и отправить через модель на сервер. Тоже самое с текстом комментария.
+
+Прелесть решения в том, что все эти манипуляции проходят через состояние. В обработчиках мы просто записываем выбор в состояние через .updateElement():
+
+#emotionClickHandler = (evt) => {
+evt.preventDefault();
+this.updateElement({
+checkedEmotion: evt.currentTarget.dataset.emotionType,
+scrollPosition: this.element.scrollTop
+});
+};
+
+#commentInputChangeHandler = (evt) => {
+evt.preventDefault();
+this._setState({comment: evt.target.value});
+};
+Это приводит к перерисовке, а компонент при отрисовке учитывает состояние (уже обновлённое):
+
+get template() {
+-  return createFilmDetailsTemplate(this.#film, this.#comments);
++  return createFilmDetailsTemplate(this._state);
+   }
+- const createFilmDetailsTemplate = ({filmInfo, userDetails, comments}) => ...
++ const createFilmDetailsTemplate = ({filmInfo, userDetails, comments, checkedEmotion, comment}) => ...
+  И поэтому на странице пользователь видит результат — выбранную эмоцию:
