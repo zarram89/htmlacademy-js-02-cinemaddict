@@ -10,7 +10,7 @@ import FilmsApiService from './api-services/films-api-service.js';
 import CommentsApiService from './api-services/comments-api-service.js';
 
 const AUTHORIZATION = 'Basic hS2sfS44wcl1sa2j';
-const END_POINT = 'https://17.ecmascript.htmlacademy.pro/cinemaddict/';
+const END_POINT = 'https://17.ecmascript.htmlacademy.pro/cinemaddict';
 
 const bodyElement = document.querySelector('body');
 const siteHeaderElement = bodyElement.querySelector('.header');
@@ -19,7 +19,7 @@ const siteFooterElement = bodyElement.querySelector('.footer');
 const siteFooterStatisticsElement = siteFooterElement.querySelector('.footer__statistics');
 
 const filmsModel = new FilmsModel(new FilmsApiService(END_POINT, AUTHORIZATION));
-const commentsModel = new CommentsModel(new CommentsApiService(END_POINT, AUTHORIZATION));
+const commentsModel = new CommentsModel(new CommentsApiService(END_POINT, AUTHORIZATION), filmsModel);
 const filterModel = new FilterModel();
 
 const headerProfilePresenter = new HeaderProfilePresenter(siteHeaderElement, filmsModel);
